@@ -9,16 +9,24 @@ window.onload = init;
 function init() {
   searchDropdown.onchange = handleSearchDropdownOnChange;
 
-  handleCategorySelection();
 }
 
 function handleSearchDropdownOnChange() {
 
+  clearResults();
+
   let categoriesList = searchDropdown.value;
+
+  if (categoriesList == "categorySearch") {
+    handleCategorySelection();
+  }
+  else if (categoriesList == "viewAllSearch") {
+    getAllProducts();
+  }
 
   categoryDropdown.style.display = (categoriesList === "categorySearch") ? "block" : "none";
 
-  fetch("http://localhost:8081/api/categories")
+  fetch(`http://localhost:8081/api/categories`)
     .then(response => {
       if (!response.ok) {
         throw new Error("Network was not ok");
@@ -39,12 +47,12 @@ function handleSearchDropdownOnChange() {
     })
     .catch(error => console.error("Fetch error:", error));
 
-    categoryDropdown.onchange = () => {
-      let categorySelected = categoryDropdown.value;
-      if(categorySelected) {
-        handleCategorySelection(categorySelected);
-      }
-    };
+  categoryDropdown.onchange = () => {
+    let categorySelected = categoryDropdown.value;
+    if (categorySelected) {
+      handleCategorySelection(categorySelected);
+    }
+  };
 }
 
 function handleCategorySelection(category) {
@@ -64,49 +72,28 @@ function handleCategorySelection(category) {
     });
 }
 
-function handleViewAll() {
-  categoryDropdown.style.display = "none";
+function getAllProducts() {
 
-  getProducts()
-    .then(data => {
-      displayResults(data);
-    })
-    .catch(error => {
-      console.error("Error fetching all products data:", error);
-    });
-}
+  // categoryDropdown.style.display = "none"
 
-function getProducts() {
-  return fetch("http://localhost:8081/api/products")
+  fetch(`http://localhost:8081/api/products`)
     .then(response => {
       if (!response.ok) {
-        throw new Error("There was a problem with the network response.");
+        throw new Error("Network response was not ok");
       }
-      return response.json();
+      return response.json()
+    })
+    .then(data => {
+      displayResults(data)
+    })
+    .catch(error => {
+      console.error("Fetch error:", error);
     });
 }
 
-// function getAllProducts() {
-
-//   categoryDropdown.style.display = "none"
-
-//   fetch("http://localhost:8081/api/products")
-//     .then(response => {
-//       if (!response.ok) {
-//         throw new Error("Network response was not ok");
-//       }
-//       return response.json()
-//     })
-//     .then(data => {
-//       displayResults(data)
-//     })
-//     .catch(error => {
-//       console.error("Fetch error:", error);
-//     });
-// }
-
 function displayResults(data) {
-  productContainer.innerHTML = "";
+
+  clearResults();
 
   data.forEach(product => {
     const card = document.createElement("div");
@@ -149,4 +136,8 @@ function displayResults(data) {
     card.appendChild(cardBody);
     productContainer.appendChild(card);
   });
+}
+
+function clearResults() {
+  productContainer.innerHTML = "";
 }
