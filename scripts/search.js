@@ -1,120 +1,152 @@
-"use strict"
+"use strict";
 
 let searchDropdown = document.getElementById("searchDropdown");
-let categoryDropdownLabel = document.getElementById("categoryDropdownLabel");
 let categoryDropdown = document.getElementById("categoryDropdown");
 let productContainer = document.getElementById("productContainer");
 
-window.onload = () => {
-  searchDropdown.onchange = searchChange;
+window.onload = init;
+
+function init() {
+  searchDropdown.onchange = handleSearchDropdownOnChange;
+
+  handleCategorySelection();
 }
 
-function searchChange() {
-  categoryDropdown.style.display = "block";
+function handleSearchDropdownOnChange() {
 
-  if (searchDropdown.value === "categorySearch") {
-    fetch("http://localhost:8081/api/categories")
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then(data => {
-        displayProductsByCategories(data);
-      })
-      .catch(error => {
-        console.error("Fetch error:", error);
-      });
-  } else if (searchDropdown.value === "viewAll") {
-    displayViewAllProducts();
-  }
-}
+  let categoriesList = searchDropdown.value;
 
-function displayProductsByCategories(categories) {
+  categoryDropdown.style.display = (categoriesList === "categorySearch") ? "block" : "none";
 
-  categoryDropdown.innerHTML = '';
-
-  let allCategoriesOption = document.createElement("option");
-  allCategoriesOption.value = "viewAll";
-  allCategoriesOption.textContent = "View All";
-  categoryDropdown.appendChild(allCategoriesOption);
-
-  // Add options for each category
-  categories.forEach(category => {
-    let option = document.createElement("option");
-    option.value = category.categoryId;
-    option.textContent = category.name;
-    categoryDropdown.appendChild(option);
-  });
-
-}
-
-function handleSearchDropdown() {
-
-  if (searchDropdown.value === "Search by category") {
-
-    categoryDropdown.style.display = "block";
-  } else {
-    categoryDropdown.style.display = "none";
-
-  }
-}
-
-function displayViewAllProducts() {
-  fetch("http://localhost:8081/api/products")
+  fetch("http://localhost:8081/api/categories")
     .then(response => {
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        throw new Error("Network was not ok");
       }
       return response.json();
     })
     .then(data => {
-      displayResults(data)
+
+      categoryDropdown.innerHTML = "";
+
+      const defaultOption = new Option("Select one");
+      categoryDropdown.appendChild(defaultOption);
+
+      for (let category of data) {
+        let option = new Option(category.name, category.categoryId);
+        categoryDropdown.appendChild(option);
+      }
+    })
+    .catch(error => console.error("Fetch error:", error));
+
+    categoryDropdown.onchange = () => {
+      let categorySelected = categoryDropdown.value;
+      if(categorySelected) {
+        handleCategorySelection(categorySelected);
+      }
+    };
+}
+
+function handleCategorySelection(category) {
+
+  fetch(`http://localhost:8081/api/products/bycategory/${category}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Network was not ok");
+      }
+      return response.json()
+    })
+    .then(data => {
+      displayResults(data);
     })
     .catch(error => {
-      console.error("Fetch error:", error);
+      console.error("Fetch category error: ", error);
     });
 }
+
+function handleViewAll() {
+  categoryDropdown.style.display = "none";
+
+  getProducts()
+    .then(data => {
+      displayResults(data);
+    })
+    .catch(error => {
+      console.error("Error fetching all products data:", error);
+    });
+}
+
+function getProducts() {
+  return fetch("http://localhost:8081/api/products")
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("There was a problem with the network response.");
+      }
+      return response.json();
+    });
+}
+
+// function getAllProducts() {
+
+//   categoryDropdown.style.display = "none"
+
+//   fetch("http://localhost:8081/api/products")
+//     .then(response => {
+//       if (!response.ok) {
+//         throw new Error("Network response was not ok");
+//       }
+//       return response.json()
+//     })
+//     .then(data => {
+//       displayResults(data)
+//     })
+//     .catch(error => {
+//       console.error("Fetch error:", error);
+//     });
+// }
 
 function displayResults(data) {
   productContainer.innerHTML = "";
 
   data.forEach(product => {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style = "width: 18rem;";
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style = "width: 18rem;";
 
-      const cardBody = document.createElement("div");
-      cardBody.className = "card-body";
+    const cardBody = document.createElement("div");
+    cardBody.className = "card-body";
 
-      const title = document.createElement("h5");
-      title.className = "card-title";
-      title.textContent = product.name;
+    const productId = document.createElement("h4");
+    productId.className = "card-title";
+    productId.textContent = "ID: " + product.productId;
 
-      const subtitle = document.createElement("h6");
-      subtitle.className = "card-subtitle mb-2 text-body-secondary";
-      subtitle.textContent = product.category;
+    const productName = document.createElement("h4");
+    productName.className = "card-title";
+    productName.textContent = product.productName;
 
-      const description = document.createElement("p");
-      description.className = "card-text";
-      description.textContent = product.description;
 
-      const detailsLink = createCardLink("See Details", `details.html?id=${product.id}`);
-      cardBody.appendChild(title);
-      cardBody.appendChild(subtitle);
-      cardBody.appendChild(description);
-      cardBody.appendChild(detailsLink);
+    const unitPrice = document.createElement("h5");
+    unitPrice.className = "card-subtitle mb-2 text-body-secondary";
+    unitPrice.textContent = "Price: " + Number(product.unitPrice).toFixed(2);
 
-      card.appendChild(cardBody);
-      productContainer.appendChild(card);
+    const unitsInStock = document.createElement("p");
+    unitsInStock.textContent = "Units: " + product.unitsInStock;
+
+    const supplier = document.createElement("p");
+    supplier.textContent = "Supplier: " + product.supplier;
+
+    const link = document.createElement("a");
+    link.href = `details.html?id=${product.productId}`;
+    link.textContent = "Product Details";
+
+    cardBody.appendChild(productId);
+    cardBody.appendChild(productName);
+    cardBody.appendChild(unitPrice);
+    cardBody.appendChild(unitsInStock);
+    cardBody.appendChild(supplier);
+    cardBody.appendChild(link);
+
+    card.appendChild(cardBody);
+    productContainer.appendChild(card);
   });
-}
-
-function createCardLink(text, href) {
-  const link = document.createElement("a");
-  link.className = "card-link";
-  link.textContent = text;
-  link.href = href;
-  return link;
 }
